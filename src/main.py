@@ -1,40 +1,101 @@
 import streamlit as st
-import pandas as pd
-import os
+import pickle
+import numpy as np
 
-# File path for the CSV file
-csv_file = "data/Salaries.csv"
 
-# Load existing data or create a new DataFrame
-if os.path.exists(csv_file):
-    data = pd.read_csv(csv_file)
-else:
-    data = pd.DataFrame(columns=["YearsExperience", "Degree", "Salary"])
+def load_model():
+    with open("saved_steps.pkl", "rb") as file:
+        data = pickle.load(file)
+    return data
 
-# Streamlit app title
-st.title("Wage Salary Predictor")
 
-# Form to enter new salary data
-st.header("Enter New Salary Data")
-with st.form(key="salary_form"):
-    years_experience = st.number_input(
-        "Years of Experience", min_value=0, max_value=50, step=1
+data = load_model()
+regressor = data["model"]
+le_country = data["le_country"]
+le_dev = data["le_dev"]
+le_education = data["le_education"]
+
+
+def show_predict_page():
+    st.title("Salary Prediction")
+
+    st.write("""### Please enter the required information to predict the salary""")
+
+    countries = (
+        "United States of America",
+        "Germany",
+        "United Kingdom of Great Britain and Northern Ireland",
+        "India",
+        "Canada",
+        "France",
+        "Brazil",
+        "Spain",
+        "Netherlands",
+        "Poland",
+        "Australia",
+        "Italy",
+        "Sweden",
+        "Russian Federation",
+        "Switzerland",
+        "Turkey",
+        "Israel",
+        "Austria",
+        "Portugal",
+        "Norway",
+        "Mexico",
     )
-    degree = st.selectbox("Degree", ["Bachelors", "Masters", "PhD"])
-    salary = st.number_input("Salary", min_value=30000, max_value=500000, step=1000)
-    submit_button = st.form_submit_button(label="Submit")
 
-    # If the user submits the form, save the data to the CSV file
-    if submit_button:
-        new_entry = {
-            "YearsExperience": years_experience,
-            "Degree": degree,
-            "Salary": salary,
-        }
-        data = data.append(new_entry, ignore_index=True)
-        data.to_csv(csv_file, index=False)
-        st.success("Data submitted successfully!")
+    dev_types = (
+        "Developer, full-stack",
+        "Developer, front-end",
+        "Developer, back-end",
+        "Data scientist or machine learning specialist",
+        "Engineer, data",
+        "Developer, mobile",
+        "Developer, desktop or enterprise applications",
+        "Engineer, site reliability",
+        "Other",
+        "Other (please specify):",
+        "Developer, embedded applications or devices",
+        "Engineering manager",
+        "DevOps specialist",
+        "Developer, QA or test",
+        "Academic researcher",
+        "Data or business analyst",
+        "Educator",
+        "Senior Executive (C-Suite, VP, etc.)",
+        "Developer, game or graphics",
+        "Cloud infrastructure engineer",
+    )
 
-# Display the existing data in the CSV file
-st.header("Current Data in the Salaries.csv File")
-st.dataframe(data)
+    education = (
+        "Master's degree",
+        "Bachelor's degree",
+        "Less than a Bachelors",
+        "Post grad",
+    )
+
+    country = st.selectbox("Country", countries)
+    dev_type = st.selectbox("Type of job", dev_types)
+    education = st.selectbox("Education Level", education)
+
+    experience = st.slider("Years of experience", 0, 50, 3)
+
+    ok = st.button("Calculate Salary")
+
+    if ok:
+        X = np.array([[country, dev_type, education, experience]])
+        X[:, 0] = le_country.transform(X[:, 0])
+        X[:, 1] = le_dev.transform(X[:, 1])
+        X[:, 2] = le_education.transform(X[:, 2])
+        X = X.astype(float)
+
+        salary = regressor.predict(X)
+        st.subheader(f"The estimated salary is ${salary[0]:.2f}")
+
+    st.write(
+        """**DISCLAIMER:** The prediction is done using a survey data collected on stackoverflow in 2022 so the estimated salary is with respect to exchange rates at the time of the survey."""
+    )
+
+
+show_predict_page()

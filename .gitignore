@@ -5,7 +5,9 @@ __pycache__/
 
 # C extensions
 *.so
-
+EDA and model training.py
+EDA and model training.ipynb
+survey_results_public.csv
 # Distribution / packaging
 .Python
 build/
